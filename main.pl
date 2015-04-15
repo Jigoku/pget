@@ -44,11 +44,14 @@ sub pget_file($$) {
 	my $label = $builder->get_object( 'label_status' );
 	my $spinner = $builder->get_object( 'spinner' );
 	
+	my @headers =  head($remotefile);
+	my $size = $headers[1];
+
 	my $thread = threads->create(
 		sub {
 			open my $fh, ">", $localfile;
 
-			my $total = 0;	
+			my $bytes = 0;
 				
 			Gtk2::Gdk::Threads->enter();
 			$spinner->visible(1);
@@ -58,10 +61,10 @@ sub pget_file($$) {
 				
 			getstore $remotefile, sub {
 				my($chunk) = @_;
-				$total += length $chunk;
+				$bytes += length $chunk;
 				
 				Gtk2::Gdk::Threads->enter();
-				$label->set_text( bytes2mb($total) ."MB" ); 
+				$label->set_text( bytes2mb($bytes) ."MB / ".bytes2mb($size) ."MB " . "(".percent($bytes, $size)."%)" ); 
 				Gtk2::Gdk::Threads->leave();
 				
 				print $fh $chunk;
@@ -94,10 +97,14 @@ sub on_button_get_clicked {
 	pget_file($entry, "test/out");
 }
 
+sub percent($$) {
+	my ($n, $total) = @_;
+	return sprintf "%.0f", (($n / $total)*100);
+}
 
 sub bytes2mb($) {
 	my $bytes = shift;
-	return sprintf "%.0f",($bytes / (1024 * 1024));
+	return sprintf "%.0f",($bytes / (1024*1024));
 }
 
 
